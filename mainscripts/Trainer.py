@@ -238,9 +238,6 @@ def main(**kwargs):
             except KeyboardInterrupt:
                 s2c.put ( {'op': 'close'} )
     else:
-        wnd_name = "Training preview"
-        #io.named_window(wnd_name)
-        #io.capture_keys(wnd_name)
 
         previews = None
         loss_history = None
@@ -323,42 +320,14 @@ def main(**kwargs):
                 final = np.concatenate ( [final, selected_preview_rgb], axis=0 )
                 final = np.clip(final, 0, 1)
 
-                #io.show_image( wnd_name, (final*255).astype(np.uint8) )
                 cv2.imwrite(str(Path(kwargs.get("saved_models_path")).joinpath("preview.jpg")), (final*255).astype(np.uint8))
                 is_showing = True
 
-            key_events = io.get_key_events(wnd_name)
-            key, chr_key, ctrl_pressed, alt_pressed, shift_pressed = key_events[-1] if len(key_events) > 0 else (0,0,False,False,False)
-
-            if key == ord('\n') or key == ord('\r'):
-                s2c.put ( {'op': 'close'} )
-            elif key == ord('s'):
-                s2c.put ( {'op': 'save'} )
-            elif key == ord('b'):
-                s2c.put ( {'op': 'backup'} )
-            elif key == ord('p'):
-                if not is_waiting_preview:
-                    is_waiting_preview = True
-                    s2c.put ( {'op': 'preview'} )
-            elif key == ord('l'):
-                if show_last_history_iters_count == 0:
-                    show_last_history_iters_count = 5000
-                elif show_last_history_iters_count == 5000:
-                    show_last_history_iters_count = 10000
-                elif show_last_history_iters_count == 10000:
-                    show_last_history_iters_count = 50000
-                elif show_last_history_iters_count == 50000:
-                    show_last_history_iters_count = 100000
-                elif show_last_history_iters_count == 100000:
-                    show_last_history_iters_count = 0
-                update_preview = True
-            elif key == ord(' '):
-                selected_preview = (selected_preview + 1) % len(previews)
-                update_preview = True
+            if not is_waiting_preview:
+                is_waiting_preview = True
+                s2c.put ( {'op': 'preview'} )
 
             try:
                 io.process_messages(0.1)
             except KeyboardInterrupt:
                 s2c.put ( {'op': 'close'} )
-
-        io.destroy_all_windows()
