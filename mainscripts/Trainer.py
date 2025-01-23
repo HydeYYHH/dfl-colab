@@ -238,17 +238,28 @@ def main(**kwargs):
             except KeyboardInterrupt:
                 s2c.put ( {'op': 'close'} )
     else:
+        wnd_name = "Training preview"
+        #io.named_window(wnd_name)
+        #io.capture_keys(wnd_name)
+
         previews = None
         loss_history = None
         selected_preview = 0
         update_preview = False
+        is_showing = False
+        is_waiting_preview = False
         show_last_history_iters_count = 0
         iter = 0
         while True:
             if not c2s.empty():
                 input = c2s.get()
+                op = input['op']
                 iter = input['iter'] if 'iter' in input.keys() else 0
-                if iter % 10 == 0:
+                print("iteration: ", iter)
+                if iter%5 == 0:
+                    op = 'show'
+                if op == 'show':
+                    is_waiting_preview = False
                     loss_history = input['loss_history'] if 'loss_history' in input.keys() else None
                     previews = input['previews'] if 'previews' in input.keys() else None
                     if previews is not None:
@@ -273,7 +284,8 @@ def main(**kwargs):
                                 previews.append ( (preview_name, cv2.resize(preview_rgb, (max_w, max_h))) )
                         selected_preview = selected_preview % len(previews)
                         update_preview = True
-                        
+                elif op == 'close':
+                    break
 
             if update_preview:
                 update_preview = False
@@ -311,4 +323,42 @@ def main(**kwargs):
                 final = np.concatenate ( [final, selected_preview_rgb], axis=0 )
                 final = np.clip(final, 0, 1)
 
+                #io.show_image( wnd_name, (final*255).astype(np.uint8) )
                 cv2.imwrite(str(Path(kwargs.get("saved_models_path")).joinpath("preview.jpg")), (final*255).astype(np.uint8))
+                is_showing = True
+
+            key_events = io.get_key_events(wnd_name)
+            key, chr_key, ctrl_pressed, alt_pressed, shift_pressed = key_events[-1] if len(key_events) > 0 else (0,0,False,False,False)
+
+            if key == ord('\n') or key == ord('\r'):
+                s2c.put ( {'op': 'close'} )
+            elif key == ord('s'):
+                s2c.put ( {'op': 'save'} )
+            elif key == ord('b'):
+                s2c.put ( {'op': 'backup'} )
+            elif key == ord('p'):
+                if not is_waiting_preview:
+                    is_waiting_preview = True
+                    s2c.put ( {'op': 'preview'} )
+            elif key == ord('l'):
+                if show_last_history_iters_count == 0:
+                    show_last_history_iters_count = 5000
+                elif show_last_history_iters_count == 5000:
+                    show_last_history_iters_count = 10000
+                elif show_last_history_iters_count == 10000:
+                    show_last_history_iters_count = 50000
+                elif show_last_history_iters_count == 50000:
+                    show_last_history_iters_count = 100000
+                elif show_last_history_iters_count == 100000:
+                    show_last_history_iters_count = 0
+                update_preview = True
+            elif key == ord(' '):
+                selected_preview = (selected_preview + 1) % len(previews)
+                update_preview = True
+
+            try:
+                io.process_messages(0.1)
+            except KeyboardInterrupt:
+                s2c.put ( {'op': 'close'} )
+
+        io.destroy_all_windows()
