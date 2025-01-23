@@ -216,7 +216,7 @@ def main(**kwargs):
     io.log_info ("Running trainer.\r\n")
 
     no_preview = kwargs.get('no_preview', False)
-
+    
     s2c = queue.Queue()
     c2s = queue.Queue()
 
@@ -252,8 +252,8 @@ def main(**kwargs):
                 input = c2s.get()
                 op = input['op']
                 iter = input['iter'] if 'iter' in input.keys() else 0
-                print("iteration: ", iter)
-                if iter%5 == 0:
+                if iter%100 == 0:
+                    print("iteration: ", iter)
                     op = 'show'
                 if op == 'show':
                     is_waiting_preview = False
